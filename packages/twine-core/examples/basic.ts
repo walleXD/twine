@@ -2,22 +2,7 @@ import * as twine from "../src";
 import { z } from "zod";
 import axios from "axios";
 
-// Define our data types
-type User = {
-  id: number;
-  name: string;
-  username: string;
-  email: string;
-};
-
-type TransformedUser = {
-  id: number;
-  username: string;
-  email: string;
-};
-
 // Define our schemas
-
 const userSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -31,14 +16,15 @@ const transformedUserSchema = z.object({
   email: z.string(),
 });
 
-// Create our graph
+// Define our types
+type User = z.infer<typeof userSchema>;
+type TransformedUser = z.infer<typeof transformedUserSchema>;
 
+// Create our graph
 const graph = twine
-  .createTwine()
-  .effect("Fetch Users", z.any(), async (): Promise<User[]> => {
-    const response = await axios.get(
-      "https://jsonplaceholder.typicode.com/users"
-    );
+  .createGraph()
+  .effect("Fetch Users", z.string(), async (link): Promise<User[]> => {
+    const response = await axios.get(link);
     return response.data;
   })
   .map("Transform Users", userSchema, (user): TransformedUser => {
@@ -54,6 +40,7 @@ const graph = twine
   .build();
 
 // Run our ETL process
-
 const run = twine.bootstrap(graph);
-run({}, {}).catch((error) => console.error(error));
+run("https://jsonplaceholder.typicode.com/users", {}).catch((error) =>
+  console.error(error)
+);
